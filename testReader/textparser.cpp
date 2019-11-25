@@ -103,7 +103,7 @@ void TextParser::init(const QString &text, const QFont &font, const QSize &size)
     // 先把换行统一
     _text.replace("\r\n", "\n");
     // 先粗略预估一下一行大概有多少字符
-    QString En = "abcdefghigklmnopzrstuvwxyz";
+    QString En = "abcdefghigklmnopqrstuvwxyz";
     En += En.toUpper();
     QString Zh = "汉字";
     auto enRect = _fm.boundingRect(En);
@@ -116,7 +116,7 @@ void TextParser::init(const QString &text, const QFont &font, const QSize &size)
     _avgCount = size.width() / _avgLen;
 }
 
-// 解析的速度比较慢，所以每次返回解析出来的一部分
+// 解析文本
 QVector<MetricText> TextParser::parser()
 {
     QVector<MetricText> mts;
@@ -126,6 +126,7 @@ QVector<MetricText> TextParser::parser()
     int posNextLine = 0, posEndLine;
 
     // 如果超过控件宽度或者碰到换行符
+    QString substr;
     for (int pos = 0; pos < _text.length();) {
         if (_text.length() - posNextLine >= _avgCount) {
             posNextLine += _avgCount;
@@ -133,29 +134,32 @@ QVector<MetricText> TextParser::parser()
         else {
             posNextLine = _text.length();
         }
-        QString substr = _text.mid(pos, posNextLine - pos);
-        textRect = _fm.boundingRect(substr);
-        while (textRect.width() < _size.width()) {
-            // auto ch = _text[posNextLine];
-            int count = (_size.width() - textRect.width()) / _avgLen;
-            substr = _text.mid(pos, posNextLine-pos+count);
-            posNextLine += count;
+        // 如果未到达边界
+        do {
+            posNextLine += (_size.width() - textRect.width()) / _avgLen;
             posEndLine = indexOfEndLine(_text, pos, posNextLine);
             if (-1 != posEndLine) {
                 posNextLine = posEndLine + 1;
-                substr = _text.mid(pos, posNextLine-pos);
             }
+            substr = _text.mid(pos, posNextLine-pos);
             textRect = _fm.boundingRect(substr);
             if (-1 != posEndLine) break;
-        }
+        }while (textRect.width() < _size.width());
 
+        // 如果超过边界
         while (textRect.width() > _size.width()) {
-            substr.chop(1);
-            --posNextLine;
+            int count = (textRect.width() - _size.width()) / _avgLen;
+            // 尽可能逼近边界
+            if (0 == count) count = 1;
+            if (2 <= count) count /= 2;
+            // qDebug() << count;
+            // count = 1;
+            substr.chop(count);
+            posNextLine -= count;
             textRect = _fm.boundingRect(substr);
         }
 
-
+        // 记录每行的显示位置
         mt.text = substr;
         mt.pos.setX(0);
         mt.height = textRect.height();

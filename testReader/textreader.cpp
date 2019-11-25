@@ -53,6 +53,7 @@ void TextReader::open(const QString &filename)
         QMessageBox msg;
         msg.setText("打开文件失败!");
         msg.exec();
+        return;
     }
     _text = _file.readAll();
     clear();

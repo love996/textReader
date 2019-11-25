@@ -50,11 +50,13 @@ void MainWindow::openFile()
     auto dirname = fileInfo.absoluteDir().path();
     _settings.setValue(lastFileDialogPath, dirname);
     ui->textReader->open(filename);
-    QFile file(filename);
-    file.open(QIODevice::ReadOnly|QIODevice::Text);
-    QString text = file.readAll();
-    text = text.toUtf8();
-    ui->textEdit->setText(text);
+
+    // QT的实现
+//    QFile file(filename);
+//    file.open(QIODevice::ReadOnly|QIODevice::Text);
+//    QString text = file.readAll();
+//    text = text.toUtf8();
+//    ui->textEdit->setText(text);
 }
 
 void MainWindow::setFont()
