@@ -1,4 +1,4 @@
-#include "textreader.h"
+﻿#include "textreader.h"
 #include <QPainter>
 #include <QStyle>
 #include <QFileDialog>
@@ -6,36 +6,45 @@
 #include <QDebug>
 #include "textparser.h"
 
-TextReader::TextReader(QWidget *parent) : QWidget(parent)
+TextReader::TextReader(QWidget *parent)
+  :QWidget(parent),
+   _posHead(0),
+   _posTail(0),
+   _indexHead(0),
+   _indexTail(0)
 {
     setTextBackground();
+    // reparse();
 }
 
 void TextReader::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
+    if (_textLines.size() > 0) {
 
-    TextParser parser(_text, this->font(), this->size());
-    auto texts = parser.parser();
-//    painter.drawText(0, 0, "hello");
-//    painter.drawText(10, 2, "hello");
-//     painter.drawText(10, 20, "hello");
-    for (auto &text : texts) {
-        painter.drawText(text.pos, text.text);
+        auto &textTop = _textLines[_indexHead];
+        auto posTop = textTop.pos.y() - textTop.height - _parser.lineSpace();
+        int i;
+        for (i = _indexHead; i < _textLines.size(); ++i) {
+            auto &text = _textLines[i];
+            if (text.pos.y() - posTop > this->size().height() ) {
+                _indexTail = i - 1;
+                break;
+            }
+            auto drawPos = text.pos;
+            drawPos.setY(drawPos.y() - posTop);
+            painter.drawText(drawPos, text.text);
+        }
+        if ( i == _textLines.size()) {
+            _indexTail = i - 1;
+        }
     }
 
-//    if (_textStream.device() != nullptr) {
-//        while (!_textStream.atEnd()) {
-//            _text = _textStream.readAll();
-//        }
-//        painter.drawText(QPointF(10, 10), _text);
-//    }
     return QWidget::paintEvent(event);
 }
 
 void TextReader::open(const QString &filename)
 {
-    // _textStream.setDevice(nullptr);
     if (_file.isOpen()) {
         _file.close();
     }
@@ -46,7 +55,28 @@ void TextReader::open(const QString &filename)
         msg.exec();
     }
     _text = _file.readAll();
-    // _textStream.setDevice(&_file);
+    clear();
+    reparse();
+}
+
+void TextReader::reparse()
+{
+    _parser.init(_text, this->font(), this->size());
+    _textLines = _parser.parser();
+}
+
+void TextReader::nextPage()
+{
+    if (_indexTail+1 >= _textLines.size()) return;
+    _preIndexHead.push(_indexHead);
+    _indexHead = _indexTail;
+}
+
+void TextReader::prePage()
+{
+    if (_preIndexHead.empty()) return;
+    _indexHead = _preIndexHead.top();
+    _preIndexHead.pop();
 }
 
 void TextReader::setTextBackground()
@@ -56,4 +86,11 @@ void TextReader::setTextBackground()
     pal.setColor(QPalette::Background, Qt::white);
     this->setAutoFillBackground(true);
     this->setPalette(pal);
+}
+
+void TextReader::clear()
+{
+    _indexHead = 0;
+    _indexTail = 0;
+    _preIndexHead = std::stack<int>();
 }

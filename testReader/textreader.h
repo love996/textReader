@@ -1,9 +1,12 @@
-#ifndef TEXTREADER_H
+﻿#ifndef TEXTREADER_H
 #define TEXTREADER_H
+
+#include <stack>
 
 #include <QWidget>
 #include <QFile>
 #include <QTextStream>
+#include "textparser.h"
 
 class TextReader : public QWidget
 {
@@ -12,15 +15,24 @@ public:
     explicit TextReader(QWidget *parent = nullptr);
     virtual void paintEvent(QPaintEvent *event) override;
     void open(const QString &filename);
+    void reparse();
+    void nextPage();
+    void prePage();
 
 private:
     void setTextBackground();
+    void clear();
 
 private:
     QFile _file;
     QString _text;
-    // QTextStream _textStream;
-    // QVector<QString> _lines;
+    QVector<MetricText> _textLines;
+    int _posHead;
+    int _posTail;
+    int _indexHead;
+    int _indexTail;
+    std::stack<int> _preIndexHead;
+    TextParser _parser;
 };
 
 #endif // TEXTREADER_H

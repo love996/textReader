@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QFileDialog>
@@ -19,12 +19,13 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->fileOpen, &QAction::triggered, [&]{
        openFile();
     });
-//    QString text("我在学Qt");
-//    text = text.toUtf8();
-//    qDebug() << text;
-//    for (auto &ch : text) {
-//        qDebug() << ch << QString(ch);
-//    }
+    QString text("我在\r\n学\nQt");
+    text.replace("\r\n", "\n");
+    text = text.toUtf8();
+    qDebug() << text  << text.length() << text.size();
+    for (int i = 0; i < text.length(); ++i) {
+        qDebug() << QString(text[i]) << typeid(text[i]).name() << typeid(QChar()).name() ;
+    }
 }
 
 MainWindow::~MainWindow()
@@ -54,3 +55,15 @@ void MainWindow::openFile()
     ui->textEdit->setText(text);
 }
 
+
+void MainWindow::on_prePage_clicked()
+{
+    ui->textReader->prePage();
+    ui->textReader->update();
+}
+
+void MainWindow::on_nextPage_clicked()
+{
+    ui->textReader->nextPage();
+    ui->textReader->update();
+}
