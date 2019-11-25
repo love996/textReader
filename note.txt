@@ -4,5 +4,8 @@
     一是优化算法，尽量减少QFontMetrics的调用
     二是另起一个线程，后台不停计算，界面显示就没感觉这么明显了。
 	目前用的方案二，在opt分支下，还有些问题需要修复
+
+
+    后来发现是QFontMetrics类中的tightBoundingRect函数在windows调用的话效率会非常低，改用boundingRect函数，效率提升非常多。
 	
 用的vimrc这个文件进行测试

@@ -106,8 +106,8 @@ void TextParser::init(const QString &text, const QFont &font, const QSize &size)
     QString En = "abcdefghigklmnopzrstuvwxyz";
     En += En.toUpper();
     QString Zh = "汉字";
-    auto enRect = _fm.tightBoundingRect(En);
-    auto zhRect = _fm.tightBoundingRect(Zh);
+    auto enRect = _fm.boundingRect(En);
+    auto zhRect = _fm.boundingRect(Zh);
     auto avgEnLen = enRect.width() / En.length();
     auto avgZhLen = zhRect.width()  / Zh.length();
 
@@ -134,7 +134,7 @@ QVector<MetricText> TextParser::parser()
             posNextLine = _text.length();
         }
         QString substr = _text.mid(pos, posNextLine - pos);
-        textRect = _fm.tightBoundingRect(substr);
+        textRect = _fm.boundingRect(substr);
         while (textRect.width() < _size.width()) {
             // auto ch = _text[posNextLine];
             int count = (_size.width() - textRect.width()) / _avgLen;
@@ -145,14 +145,14 @@ QVector<MetricText> TextParser::parser()
                 posNextLine = posEndLine + 1;
                 substr = _text.mid(pos, posNextLine-pos);
             }
-            textRect = _fm.tightBoundingRect(substr);
+            textRect = _fm.boundingRect(substr);
             if (-1 != posEndLine) break;
         }
 
         while (textRect.width() > _size.width()) {
             substr.chop(1);
             --posNextLine;
-            textRect = _fm.tightBoundingRect(substr);
+            textRect = _fm.boundingRect(substr);
         }
 
 
