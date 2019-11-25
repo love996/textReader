@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QList>
 #include <QTextCodec>
+#include <QFontDialog>
 // #pragma execution_character_set("utf-8")
 
 MainWindow::MainWindow(QWidget *parent)
@@ -19,13 +20,16 @@ MainWindow::MainWindow(QWidget *parent)
     QObject::connect(ui->fileOpen, &QAction::triggered, [&]{
        openFile();
     });
-    QString text("我在\r\n学\nQt");
-    text.replace("\r\n", "\n");
-    text = text.toUtf8();
-    qDebug() << text  << text.length() << text.size();
-    for (int i = 0; i < text.length(); ++i) {
-        qDebug() << QString(text[i]) << typeid(text[i]).name() << typeid(QChar()).name() ;
-    }
+    QObject::connect(ui->textFont, &QAction::triggered, [&]{
+       setFont();
+    });
+//    QString text("我在\r\n学\nQt");
+//    text.replace("\r\n", "\n");
+//    text = text.toUtf8();
+//    qDebug() << text  << text.length() << text.size();
+//    for (int i = 0; i < text.length(); ++i) {
+//        qDebug() << QString(text[i]) << typeid(text[i]).name() << typeid(QChar()).name() ;
+//    }
 }
 
 MainWindow::~MainWindow()
@@ -36,7 +40,6 @@ MainWindow::~MainWindow()
 void MainWindow::openFile()
 {
     auto lastPath = _settings.value(lastFileDialogPath).toString();
-    qDebug() << "lastPath:" << lastPath;
     QFileDialog dlg(this, "选择文本文件", lastPath);
     auto filename =  dlg.getOpenFileName();
     if ("" == filename) {
@@ -46,13 +49,21 @@ void MainWindow::openFile()
     QFileInfo fileInfo(filename);
     auto dirname = fileInfo.absoluteDir().path();
     _settings.setValue(lastFileDialogPath, dirname);
-    qDebug() << "dirname:" << dirname << "filename:" << filename;
     ui->textReader->open(filename);
     QFile file(filename);
     file.open(QIODevice::ReadOnly|QIODevice::Text);
     QString text = file.readAll();
     text = text.toUtf8();
     ui->textEdit->setText(text);
+}
+
+void MainWindow::setFont()
+{
+    QFontDialog dlg;
+    bool flag;
+    auto font = dlg.getFont(&flag);
+    ui->textReader->setFont(font);
+    ui->textReader->reparse();
 }
 
 

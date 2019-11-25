@@ -34,5 +34,7 @@ private:
     void openFile();
     // 显示文件
     void showText();
+    // 设置字体
+    void setFont();
 };
 #endif // MAINWINDOW_H

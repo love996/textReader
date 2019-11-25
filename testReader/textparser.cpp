@@ -114,7 +114,6 @@ void TextParser::init(const QString &text, const QFont &font, const QSize &size)
     // 先简单假设每行中英文比例一样
     _avgLen = (avgEnLen + avgZhLen) / 2;
     _avgCount = size.width() / _avgLen;
-    qDebug() << "平均每行：" << _avgCount << "个字符";
 }
 
 // 解析的速度比较慢，所以每次返回解析出来的一部分
@@ -136,7 +135,6 @@ QVector<MetricText> TextParser::parser()
         }
         QString substr = _text.mid(pos, posNextLine - pos);
         textRect = _fm.tightBoundingRect(substr);
-        qDebug() << substr << textRect.width() << textRect.height() << _size.width();
         while (textRect.width() < _size.width()) {
             // auto ch = _text[posNextLine];
             int count = (_size.width() - textRect.width()) / _avgLen;
@@ -147,16 +145,13 @@ QVector<MetricText> TextParser::parser()
                 posNextLine = posEndLine + 1;
                 substr = _text.mid(pos, posNextLine-pos);
             }
-
             textRect = _fm.tightBoundingRect(substr);
-            qDebug() << "while <:" << substr << textRect;
             if (-1 != posEndLine) break;
         }
 
         while (textRect.width() > _size.width()) {
             substr.chop(1);
             --posNextLine;
-            qDebug() << "while > :" << substr << textRect;
             textRect = _fm.tightBoundingRect(substr);
         }
 
@@ -168,7 +163,6 @@ QVector<MetricText> TextParser::parser()
         mt.pos.setY(_currY);
         mts.push_back(std::move(mt));
         pos = posNextLine;
-        // qDebug() << mt.pos << mt.text;
     }
 
     return mts;
