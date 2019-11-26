@@ -6,6 +6,26 @@
 #include <QDebug>
 #include "textparser.h"
 
+#include <QTextCodec>
+
+QString GetCorrectUnicode(const QByteArray &ba)
+{
+    QTextCodec::ConverterState state;
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    QString text = codec->toUnicode( ba.constData(), ba.size(), &state);
+    //目前假设只有utf8和gbk
+    if (state.invalidChars) {
+        // qDebug() << "gbk";
+        text = QTextCodec::codecForName( "GB18030" )->toUnicode(ba);
+    }
+    else {
+        // qDebug() << "utf8";
+        text = ba;
+    }
+    return text;
+}
+
+
 TextReader::TextReader(QWidget *parent)
   :QWidget(parent),
    _posHead(0),
@@ -55,7 +75,9 @@ void TextReader::open(const QString &filename)
         msg.exec();
         return;
     }
-    _text = _file.readAll();
+    auto textByte = _file.readAll();
+    // _text = textByte;
+    _text = GetCorrectUnicode(textByte);
     clear();
     reparse();
 }
