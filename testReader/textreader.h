@@ -26,12 +26,11 @@ private:
 private:
     QFile _file;
     QString _text;
-    QVector<MetricText> _textLines;
+    // QVector<MetricText> _textLines;
     int _posHead;
     int _posTail;
-    int _indexHead;
-    int _indexTail;
-    std::stack<int> _preIndexHead;
+    int _lastPaintPageIndex;
+    int _pageIndex;
     TextParser _parser;
 };
 

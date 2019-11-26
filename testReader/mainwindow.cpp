@@ -52,11 +52,11 @@ void MainWindow::openFile()
     ui->textReader->open(filename);
 
     // QT的实现
-//    QFile file(filename);
-//    file.open(QIODevice::ReadOnly|QIODevice::Text);
-//    QString text = file.readAll();
-//    text = text.toUtf8();
-//    ui->textEdit->setText(text);
+    //    QFile file(filename);
+    //    file.open(QIODevice::ReadOnly|QIODevice::Text);
+    //    QString text = file.readAll();
+    //    text = text.toUtf8();
+    //    ui->textEdit->setText(text);
 }
 
 void MainWindow::setFont()

@@ -24,7 +24,8 @@ SOURCES += \
 HEADERS += \
     mainwindow.h \
     textparser.h \
-    textreader.h
+    textreader.h \
+    tool.h
 
 FORMS += \
     mainwindow.ui

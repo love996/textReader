@@ -30,8 +30,8 @@ TextReader::TextReader(QWidget *parent)
   :QWidget(parent),
    _posHead(0),
    _posTail(0),
-   _indexHead(0),
-   _indexTail(0)
+   _lastPaintPageIndex(-1),
+   _pageIndex(0)
 {
     setTextBackground();
     // reparse();
@@ -40,23 +40,12 @@ TextReader::TextReader(QWidget *parent)
 void TextReader::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    if (_textLines.size() > 0) {
-
-        auto &textTop = _textLines[_indexHead];
-        auto posTop = textTop.pos.y() - textTop.height - _parser.lineSpace();
-        int i;
-        for (i = _indexHead; i < _textLines.size(); ++i) {
-            auto &text = _textLines[i];
-            if (text.pos.y() - posTop > this->size().height() ) {
-                _indexTail = i - 1;
-                break;
-            }
-            auto drawPos = text.pos;
-            drawPos.setY(drawPos.y() - posTop);
-            painter.drawText(drawPos, text.text);
-        }
-        if ( i == _textLines.size()) {
-            _indexTail = i - 1;
+    // qDebug() << "length:" << _parser.length() << "index:" << _pageIndex;
+    if (_parser.length() > _pageIndex) {
+        auto page = _parser.getPage(_pageIndex);
+        for (int i = 0; i < page.lines.size(); ++i) {
+            // qDebug() << page.lines[i].pos.x() << page.lines[i].pos.y();
+            painter.drawText(page.lines[i].pos, page.lines[i].text);
         }
     }
 
@@ -84,22 +73,23 @@ void TextReader::open(const QString &filename)
 
 void TextReader::reparse()
 {
-    _parser.init(_text, this->font(), this->size());
-    _textLines = _parser.parser();
+    // _parser.init(_text, this->font(), this->size());
+    _parser.setText(QString(_text));
+    _parser.setFont(this->font());
+    _parser.setSize(this->size());
+    _parser.threadParser();
+    // _textLines = _parser.getSharedBuf();
 }
 
 void TextReader::nextPage()
 {
-    if (_indexTail+1 >= _textLines.size()) return;
-    _preIndexHead.push(_indexHead);
-    _indexHead = _indexTail;
+    if (_pageIndex+1 >= _parser.length()) return;
+    ++_pageIndex;
 }
 
 void TextReader::prePage()
 {
-    if (_preIndexHead.empty()) return;
-    _indexHead = _preIndexHead.top();
-    _preIndexHead.pop();
+    if (0 < _pageIndex) --_pageIndex;
 }
 
 void TextReader::setTextBackground()
@@ -113,7 +103,6 @@ void TextReader::setTextBackground()
 
 void TextReader::clear()
 {
-    _indexHead = 0;
-    _indexTail = 0;
-    _preIndexHead = std::stack<int>();
+    _lastPaintPageIndex = -1;
+    _pageIndex = 0;
 }

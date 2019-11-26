@@ -2,81 +2,9 @@
 
 #include <QFontMetricsF>
 #include <QDebug>
-#include <Algorithm>
+#include <algorithm>
 
-template <typename String>
-bool isEndLine(const String &s)
-{
-    static String endLineUnix("\n");
-    static String endLineWin("\r\n");
-    return s == endLineUnix || s == endLineWin;
-}
-
-template <>
-bool isEndLine<QChar>(const QChar &s)
-{
-    static QString endLineUnix("\n");
-    static QString endLineWin("\r\n");
-    return s == endLineUnix || s == endLineWin;
-}
-
-template <>
-bool isEndLine<QCharRef>(const QCharRef &s)
-{
-    static QString endLineUnix("\n");
-    static QString endLineWin("\r\n");
-    return s == endLineUnix || s == endLineWin;
-}
-
-template <>
-bool isEndLine<const char *>(const char * const &s)
-{
-    static std::string endLineUnix("\n");
-    static std::string endLineWin("\r\n");
-    return s == endLineUnix || s == endLineWin;
-}
-
-
-// 没有找到区间内查找的函数
-int indexOf(const QString &text, const QChar &&v, int from, int to) {
-    auto beg = text.begin();
-    if (to - from > text.length()) {
-        to = from + text.length();
-    }
-    auto posBeg = beg + from;
-    auto posEnd = beg + to;
-    auto iter_find = std::find(posBeg, posEnd, v);
-    if (iter_find == text.end()) {
-        return -1;
-    }
-    return iter_find - beg;
-}
-
-int indexOfEndLine(const QString &text, int from, int to) {
-//    int pos = text.indexOf("\n");
-//    if (-1 == pos) {
-//        return -1;
-//    }
-//    if (0 == pos) {
-//        return pos;
-//    }
-//    if (text[pos-1] == "QChar('\r')") {
-//        return pos -1;
-//    }
-//    return pos;
-    int pos = indexOf(text, QChar('\n'), from, to);
-    if (-1 == pos) {
-        return -1;
-    }
-    if (0 == pos) {
-        return pos;
-    }
-    if (text[pos-1] == '\r') {
-        return pos -1;
-    }
-    return pos;
-}
-
+#include "tool.h"
 
 
 TextParser::TextParser()
@@ -86,22 +14,48 @@ TextParser::TextParser()
 
 }
 
-TextParser::TextParser(const QString &text, const QFont &font, const QSize &size)
+TextParser::TextParser(QString &&text, const QFont &font, const QSize &size)
     :_lineSpace(5),
       _currY(0),
-      _fm(font)
+      _fm(font),
+      _stop{false},
+      _done{false},
+      _currPageIndex(-1)
 {
-    init(_text, font, size);
+    setText(std::move(text));
+    setFont(font);
+    setSize(size);
+    // init(_text, font, size);
 }
 
-void TextParser::init(const QString &text, const QFont &font, const QSize &size)
+TextParser::~TextParser()
 {
-    _text = text;
-    _font = font;
-    _size = size;
-    _fm = QFontMetricsF(_font);
+    stopParser();
+}
+
+void TextParser::setText(QString &&text)
+{
     // 先把换行统一
-    _text.replace("\r\n", "\n");
+    text.replace("\r\n", "\n");
+    _text = std::move(text);
+}
+
+void TextParser::setFont(const QFont &font)
+{
+    _font = font;
+    _fm = QFontMetricsF(_font);
+    calc();
+}
+
+void TextParser::setSize(const QSize &size)
+{
+    _size = size;
+    calc();
+}
+
+void TextParser::calc()
+{
+    if (_size.width() == 0 || _size.height() == 0) return;
     // 先粗略预估一下一行大概有多少字符
     QString En = "abcdefghigklmnopqrstuvwxyz";
     En += En.toUpper();
@@ -113,14 +67,15 @@ void TextParser::init(const QString &text, const QFont &font, const QSize &size)
 
     // 先简单假设每行中英文比例一样
     _avgLen = (avgEnLen + avgZhLen) / 2;
-    _avgCount = size.width() / _avgLen;
+    _avgCount = _size.width() / _avgLen;
+    qDebug() << "每行大概" << _avgCount << "个字符";
 }
 
 // 解析文本
-QVector<MetricText> TextParser::parser()
+void TextParser::parser()
 {
-    QVector<MetricText> mts;
     // QChar lastCh;
+    PageText pt;
     MetricText mt;
     QRectF textRect;
     int posNextLine = 0, posEndLine;
@@ -128,6 +83,8 @@ QVector<MetricText> TextParser::parser()
     // 如果超过控件宽度或者碰到换行符
     QString substr;
     for (int pos = 0; pos < _text.length();) {
+        if (_stop) return;
+        // qDebug() << _text.length() << _text.size() << posNextLine;
         if (_text.length() - posNextLine >= _avgCount) {
             posNextLine += _avgCount;
         }
@@ -144,7 +101,7 @@ QVector<MetricText> TextParser::parser()
             substr = _text.mid(pos, posNextLine-pos);
             textRect = _fm.boundingRect(substr);
             if (-1 != posEndLine) break;
-        }while (textRect.width() < _size.width());
+        } while (textRect.width() < _size.width());
 
         // 如果超过边界
         while (textRect.width() > _size.width()) {
@@ -152,8 +109,6 @@ QVector<MetricText> TextParser::parser()
             // 尽可能逼近边界
             if (0 == count) count = 1;
             if (2 <= count) count /= 2;
-            // qDebug() << count;
-            // count = 1;
             substr.chop(count);
             posNextLine -= count;
             textRect = _fm.boundingRect(substr);
@@ -165,12 +120,49 @@ QVector<MetricText> TextParser::parser()
         mt.height = textRect.height();
         _currY += _lineSpace + textRect.height();
         mt.pos.setY(_currY);
-        mts.push_back(std::move(mt));
-        pos = posNextLine;
-    }
 
-    return mts;
+        pos = posNextLine;
+
+        if (_currY >= _size.height())
+        {
+            {
+                std::lock_guard<std::mutex> lck(_rdlck);
+                _sharedBuf.push_back(std::move(pt));
+                ++_currPageIndex;
+            }
+
+            // 新的一页
+            pt = PageText{};
+            _currY = 0;
+            _currY += _lineSpace + textRect.height();
+            mt.pos.setY(_currY);
+            pt.lines.push_back(std::move(mt));
+
+        }
+
+        pt.lines.push_back(std::move(mt));
+
+
+    }
+    if (pt.lines.size() > 0) {
+        std::lock_guard<std::mutex> lck(_rdlck);
+        _sharedBuf.push_back(std::move(pt));
+        ++_currPageIndex;
+    }
+    _done = true;
+    return;
 }
+
+void TextParser::initThread()
+{
+    _stop = false;
+    _done = false;
+    _currY = 0;
+    _currPageIndex = -1;
+    _sharedBuf.clear();
+}
+
+
 
 int TextParser::lineSpace() const
 {
@@ -180,4 +172,43 @@ int TextParser::lineSpace() const
 void TextParser::setLineSpace(int lineSpace)
 {
     _lineSpace = lineSpace;
+}
+
+void TextParser::stopParser()
+{
+    if (_thread.joinable()) {
+        _stop = true;
+        _thread.join();
+    }
+    qDebug() << "停止解析";
+}
+
+void TextParser::threadParser()
+{
+    stopParser();
+    initThread();
+    _thread = std::thread([&]{
+        parser();
+    });
+}
+
+int TextParser::length() const
+{
+    if (_text.length() > 0) {
+        while(-1 == _currPageIndex) {
+            std::this_thread::yield();
+        }
+    }
+    return _currPageIndex+1;
+}
+
+PageText TextParser::getPage(int index)
+{
+    std::lock_guard<std::mutex> lck(_rdlck);
+    return _sharedBuf.at(index);
+}
+
+bool TextParser::done() const
+{
+    return _done;
 }
